@@ -1143,6 +1143,26 @@ define Device/tplink_deco-m9plus-v2
 endef
 TARGET_DEVICES += tplink_deco-m9plus-v2
 
+define Device/tplink_deco-m9plus-v1
+	$(call Device/FitzImage)
+	SOC := qcom-ipq4019
+	DEVICE_MODEL := Deco-M9Plus
+	DEVICE_VARIANT := v1
+# ? where does the v2 one come from
+	DEVICE_PACKAGES := ipq-wifi-tplink_deco-m9plus-v2
+	TPLINK_BOARD_ID := DECO-M9PLUS
+	KERNEL_NAME := Image
+#	KERNEL_SIZE := 4096k
+#	IMAGE_SIZE := 65536k
+	IMAGES += sysupgrade.bin rootfs.bin
+	IMAGE/sysupgrade.bin := append-kernel
+	IMAGE/rootfs.bin := append-rootfs | pad-rootfs | append-metadata
+#	FILESYSTEMS := squashfs
+	DEVICE_DTS_CONFIG := config@ap.dk07.1-c1
+	DEVICE_DTS_DELIMITER := @
+endef
+TARGET_DEVICES += tplink_deco-m9plus-v1
+
 define Device/teltonika_rutx10
 	$(call Device/FitImage)
 	$(call Device/UbiFit)
