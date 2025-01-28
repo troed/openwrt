@@ -1,0 +1,44 @@
+--- a/drivers/mmc/host/sdhci-msm.c
++++ b/drivers/mmc/host/sdhci-msm.c
+@@ -17,6 +17,8 @@
+ #include <linux/of.h>
+ #include <linux/pinctrl/consumer.h>
+ #include <linux/reset.h>
++#include <linux/of_gpio.h>
++#include <linux/gpio.h>
+ 
+ #include <soc/qcom/ice.h>
+ 
+@@ -2405,6 +2407,7 @@
+ 	struct sdhci_msm_host *msm_host;
+ 	struct clk *clk;
+ 	int ret;
++        int sd_ldo;
+ 	u16 host_version, core_minor;
+ 	u32 core_version, config;
+ 	u8 core_major;
+@@ -2422,6 +2425,24 @@
+ 	msm_host->mmc = host->mmc;
+ 	msm_host->pdev = pdev;
+ 
++        sd_ldo = of_get_named_gpio(node, "sd-ldo-gpios", 0);
++        if (gpio_is_valid(sd_ldo)) {
++                ret = devm_gpio_request(&pdev->dev, sd_ldo, "sd-ldo-gpios");
++                if (ret) {
++                        dev_err(&pdev->dev,
++                                "failed to request sd-ldo-gpios %d\n",
++                                sd_ldo);
++                        return ret;
++                }
++                dev_info(&pdev->dev, "Got SD LDO GPIO #%d\n", sd_ldo);
++
++                /* Toggle SD LDO GPIO on Init */
++                gpio_direction_output(sd_ldo, 1);
++                gpio_set_value(sd_ldo, 0);
++                mdelay(100);
++                gpio_set_value(sd_ldo, 1);
++        }
++
+ 	ret = mmc_of_parse(host->mmc);
+ 	if (ret)
+ 		goto pltfm_free;

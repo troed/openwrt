@@ -7,6 +7,10 @@
 #include <dt-bindings/soc/qcom,tcsr.h>
 #include <dt-bindings/leds/common.h>
 / {
+	chosen {
+		bootargs-append = " clk_ignore_unused";
+	};
+
 	aliases {
 		led-boot = &led_blue;
 		led-failsafe = &led_red;
@@ -14,6 +18,7 @@
 		led-upgrade = &led_red;
 		label-mac-device = &swport4;
 	};
+
 	keys {
 		compatible = "gpio-keys";
 		reset {
@@ -22,7 +27,11 @@
 			linux,code = <KEY_RESTART>;
 		};
 	};
+
 	soc {
+		qcom,msm_qpic@7980000 {
+			status = "ok";
+		};
 		tcsr@194b000 {
 			compatible = "qcom,tcsr";
 			reg = <0x194b000 0x100>;
@@ -44,6 +53,13 @@
 			reg = <0x1953000 0x1000>;
 			qcom,ess-interface-select = <TCSR_ESS_PSGMII>;
 		};
+		qcom_crypto: qcrypto@8e20000 {
+			status = "okay";
+		};
+
+		qcom_cedev: qcedev@8e20000 {
+			status = "okay";
+		};
 	};
 };
 &tlmm {
@@ -59,18 +75,6 @@
 			pins = "gpio8", "gpio9", "gpio10", "gpio11";
 			function = "blsp_uart1";
 			bias-disable;
-		};
-	};
-	mmc0_pins_default: mmc0-pins-default {
-		mux {
-			function = "flash";
-			groups = "emmc_8";
-		};
-	};
-	mmc0_pins_uhs: mmc0-pins-uhs {
-		mux {
-			function = "flash";
-			groups = "emmc_8";
 		};
 	};
 	spi_0_pins: spi_0_pinmux {
@@ -96,25 +100,69 @@
 			bias-disable;
 		};
 	};
-	wifi_pins: wifi_pinmux {
-		pinmux_1 {
+	wifi_0_pins: wifi1_pinmux {
+		mux_1 {
 			pins = "gpio37";
-			function = "gpio";
-			drive-strength = <6>;
-			bias-pull-up;
 			output-high;
-		};
-		pinmux_2 {
-			pins = "gpio42";
-			function = "gpio";
-			drive-strength = <6>;
+			function="gpio";
 			bias-pull-up;
-			output-high;
+			drive-strength = <6>;
 		};
-		pinmux_3 {
+		mux_2 {
 			pins = "gpio43";
-			function = "gpio";
+			function="gpio";
+			bias-pull-up;
 			drive-strength = <6>;
+		};
+		mux_3 {
+			pins = "gpio52";
+			output-high;
+			function="gpio";
+			bias-pull-up;
+			drive-strength = <6>;
+		};
+	};
+
+	sd_0_pins: sd_0_pinmux {
+		sd0 {
+			pins = "gpio23";
+			function = "sdio";
+			drive-strength = <10>;
+		};
+		sd1 {
+			pins = "gpio24";
+			function = "sdio";
+			drive-strength = <10>;
+		};
+		sd2 {
+			pins = "gpio25";
+			function = "sdio";
+			drive-strength = <10>;
+		};
+		sd3 {
+			pins = "gpio26";
+			function = "sdio";
+			drive-strength = <10>;
+		};
+		sdclk {
+			pins = "gpio27";
+			function = "sdio";
+			drive-strength = <16>;
+		};
+		sdcmd {
+			pins = "gpio28";
+			function = "sdio";
+			drive-strength = <10>;
+		};
+    };
+	ts_0_pins: ts_0_pinmux {
+		mux_1 {
+			pins = "gpio34";
+			output-high;
+		};
+		mux_2 {
+			pins= "gpio35";
+			input-enable;
 			bias-pull-up;
 		};
 	};
@@ -146,7 +194,7 @@
 	flash@0 {
 		compatible = "jedec,spi-nor";
 		reg = <0>;
-		spi-max-frequency = <10000000>;
+		spi-max-frequency = <24000000>;
 
 		partitions {
 			compatible = "fixed-partitions";
@@ -233,6 +281,24 @@
 		};
 	};
 };
+&vqmmc {
+	regulator-min-microvolt = <1800000>;
+	states = <3000000 0x3
+			  1800000 0x1>;
+	reg = <0x01948000 0x4>;
+	mask = <0x3>;
+	status = "okay";
+};
+&sdhci {
+	status = "okay";
+	cap-mmc-highspeed;
+	max-frequency = <52000000>;
+	pinctrl-0 = <&sd_0_pins>;
+	pinctrl-names = "default";
+	vqmmc-supply = <&vqmmc>;
+	cd-gpios = <&tlmm 22 GPIO_ACTIVE_LOW>;
+	sd-ldo-gpios = <&tlmm 33 GPIO_ACTIVE_LOW>;
+};
 &pcie0 {
 	status = "okay";
 
@@ -297,9 +363,12 @@
 	nvmem-cells = <&macaddr_config_0>;
 	mac-address-increment = <1>;
 };
+
 &wifi0 {
-	pinctrl-0 = <&wifi_pins>;
+	pinctrl-0 = <&wifi_0_pins>;
 	pinctrl-names = "default";
+	btcoex_support = <1>;
+	wlan_prio_gpio = <52>;
 	status = "okay";
 	nvmem-cell-names = "pre-calibration", "mac-address";
 	nvmem-cells = <&precal_art_1000>, <&macaddr_config_0>;
@@ -308,6 +377,7 @@
 
 &wifi1 {
 	status = "okay";
+	btcoex_support = <0>;
 	nvmem-cell-names = "pre-calibration", "mac-address";
 	nvmem-cells = <&precal_art_5000>, <&macaddr_config_0>;
 	mac-address-increment = <3>;
